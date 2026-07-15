@@ -215,7 +215,7 @@
   #tr-go:active{transform:scale(.97);}
   #tr-go:disabled{opacity:.5; cursor:default;}
   #tr-result{
-    position:relative; width:min(700px,100%); min-height:190px;
+    position:relative; width:min(700px,100%); min-height:150px;
     background:linear-gradient(180deg, #0a101f, #070b16);
     border:1px solid var(--line); border-radius:var(--radius);
     box-shadow:inset 0 0 46px rgba(0,0,0,.6);
@@ -265,6 +265,49 @@
   }
   #tr-hint::after{content:"▮"; margin-left:8px; animation:cursorblink 1.1s steps(1) infinite;}
   @keyframes cursorblink{50%{opacity:0}}
+
+  /* ---------- タッチキーボード（翻訳用・ローマ字入力） ----------
+     QWERTY 3段＋数字段＋機能段。キーは押し込み式の立体キーキャップ */
+  #kbd{width:min(620px,100%); display:flex; flex-direction:column; gap:7px;}
+  .kbd-row{display:flex; gap:6px; justify-content:center;}
+  .kbd-row.indent1{padding:0 4.5%;}
+  .kbd-row.indent2{padding:0 2%;}
+  .kbd-key{
+    flex:1; min-width:0; height:46px;
+    font-family:var(--mono); font-size:1.02rem; text-transform:uppercase;
+    color:var(--ice); text-shadow:0 0 10px rgba(159,183,255,.25);
+    background:linear-gradient(180deg, #202b48, #141c33);
+    border:1px solid rgba(150,178,255,.20); border-bottom-color:rgba(150,178,255,.08);
+    border-radius:10px;
+    box-shadow:0 3px 0 #070b16, 0 5px 12px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.08);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:transform .05s, box-shadow .05s, background .15s, border-color .15s, color .15s;
+    touch-action:manipulation; -webkit-user-select:none; user-select:none;
+  }
+  .kbd-key:hover{border-color:rgba(111,141,255,.6); color:#fff;}
+  .kbd-key:active{
+    transform:translateY(3px);
+    background:linear-gradient(180deg, #2a3963, #1b2645);
+    box-shadow:0 0 0 #070b16, 0 1px 4px rgba(0,0,0,.4),
+               inset 0 1px 0 rgba(255,255,255,.06), 0 0 18px rgba(111,141,255,.4);
+  }
+  #kbd-num .kbd-key{
+    height:33px; font-size:.82rem; color:var(--sub); border-radius:8px;
+    box-shadow:0 2px 0 #070b16, 0 3px 8px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  #kbd-num .kbd-key:active{transform:translateY(2px); box-shadow:0 0 0 #070b16, 0 0 14px rgba(111,141,255,.35);}
+  .kbd-key.bs{flex:1.6; font-size:1.1rem; color:var(--sub);}
+  .kbd-key.fn{flex:1.5; font-family:inherit; font-size:.9rem; text-transform:none; color:var(--sub);}
+  .kbd-key.dash{flex:3.6;}   /* 「ー」をスペースキー位置に */
+  .kbd-key.go{
+    flex:2; font-family:inherit; font-size:1rem; text-transform:none;
+    background:linear-gradient(180deg, #7f9bff, #5872e6);
+    color:#0a0f1e; font-weight:700; letter-spacing:.25em; text-indent:.25em;
+    border:none; text-shadow:none;
+    box-shadow:0 3px 0 #2c3d86, 0 6px 16px rgba(111,141,255,.4);
+  }
+  .kbd-key.go:hover{filter:brightness(1.08);}
+  .kbd-key.go:active{transform:translateY(3px); box-shadow:0 0 0 #2c3d86, 0 0 20px rgba(111,141,255,.5);}
 
   /* ---------- 時計 ---------- */
   #app-clock .app-body{justify-content:center;}
@@ -518,9 +561,9 @@
     </div>
     <div class="app-body stagger">
       <div id="tr-form">
-        <span id="tr-label">日本語の語句を入力 — INPUT JAPANESE WORD</span>
+        <span id="tr-label">ローマ字で入力 — ROMAJI INPUT</span>
         <div id="tr-row">
-          <input id="tr-input" type="text" inputmode="text" autocomplete="off" placeholder="例：りんご">
+          <input id="tr-input" type="text" inputmode="none" autocomplete="off" placeholder="例：tokei → とけい">
           <button id="tr-go">翻訳</button>
         </div>
       </div>
@@ -530,6 +573,18 @@
         <div id="tr-tiles"></div>
         <span id="tr-error">error</span>
         <span id="tr-hint">READY</span>
+      </div>
+      <!-- タッチキーボード（ローマ字入力。文字キーはJSで生成） -->
+      <div id="kbd" aria-label="タッチキーボード">
+        <div class="kbd-row" id="kbd-num"></div>
+        <div class="kbd-row" data-keys="qwertyuiop"></div>
+        <div class="kbd-row indent1" data-keys="asdfghjkl"></div>
+        <div class="kbd-row indent2" data-keys="zxcvbnm" data-extra="bs"></div>
+        <div class="kbd-row">
+          <button class="kbd-key fn" id="kbd-clear">クリア</button>
+          <button class="kbd-key dash" data-ch="ー">ー</button>
+          <button class="kbd-key go" id="kbd-go">翻訳</button>
+        </div>
       </div>
     </div>
   </section>
@@ -686,6 +741,7 @@ function finishBoot(){
   bootEl.classList.add("hidden");
   bootEl.classList.remove("playing");
   bootPlaying = false;
+  startShowClock();   // 初回のホーム表示で作中時刻 19:30 が進み始める（2回目以降は無効）
   // どの画面にいてもホームに戻す
   screens.forEach(s => s.classList.remove("active", "entering"));
   const home = $("home");
@@ -789,9 +845,11 @@ const trTiles  = $("tr-tiles");
 const trHint   = $("tr-hint");
 const trGo     = $("tr-go");
 let translating = false;
+let kbdFinalize = null;   // タッチキーボードが未確定ローマ字を確定させるフック
 
 function translate(){
   if (translating) return;
+  if (kbdFinalize) kbdFinalize();   // 末尾の未確定分（n など）を確定してから読む
   const raw = trInput.value;
   const key = normalizeJa(raw);
 
@@ -832,6 +890,148 @@ trGo.addEventListener("click", translate);
 trInput.addEventListener("keydown", e => { if (e.key === "Enter") translate(); });
 
 /* ================================================================
+   タッチキーボード（翻訳用・ローマ字入力）
+   QWERTYキーを打つとローマ字→ひらがなに自動変換して入力欄に表示。
+   変換途中のローマ字（子音など）はそのまま末尾に表示され、
+   続きを打つとかなに変わる（IMEと同じ挙動）。
+   例）t → 「t」/ to → 「と」/ kya → 「きゃ」/ kitte → 「きって」
+   ================================================================ */
+(function buildKeyboard(){
+  /* ローマ字→ひらがな 変換表（最長一致。ヘボン式・訓令式の両方に対応） */
+  const ROMAJI = {
+    a:"あ", i:"い", u:"う", e:"え", o:"お",
+    ka:"か", ki:"き", ku:"く", ke:"け", ko:"こ",
+    sa:"さ", si:"し", su:"す", se:"せ", so:"そ",
+    ta:"た", ti:"ち", tu:"つ", te:"て", to:"と",
+    na:"な", ni:"に", nu:"ぬ", ne:"ね", no:"の",
+    ha:"は", hi:"ひ", hu:"ふ", he:"へ", ho:"ほ",
+    ma:"ま", mi:"み", mu:"む", me:"め", mo:"も",
+    ya:"や", yu:"ゆ", yo:"よ",
+    ra:"ら", ri:"り", ru:"る", re:"れ", ro:"ろ",
+    wa:"わ", wo:"を", wi:"うぃ", we:"うぇ",
+    ga:"が", gi:"ぎ", gu:"ぐ", ge:"げ", go:"ご",
+    za:"ざ", zi:"じ", zu:"ず", ze:"ぜ", zo:"ぞ",
+    da:"だ", di:"ぢ", du:"づ", de:"で", do:"ど",
+    ba:"ば", bi:"び", bu:"ぶ", be:"べ", bo:"ぼ",
+    pa:"ぱ", pi:"ぴ", pu:"ぷ", pe:"ぺ", po:"ぽ",
+    fa:"ふぁ", fi:"ふぃ", fu:"ふ", fe:"ふぇ", fo:"ふぉ",
+    va:"ゔぁ", vi:"ゔぃ", vu:"ゔ", ve:"ゔぇ", vo:"ゔぉ",
+    kya:"きゃ", kyu:"きゅ", kyo:"きょ",
+    gya:"ぎゃ", gyu:"ぎゅ", gyo:"ぎょ",
+    sha:"しゃ", shi:"し", shu:"しゅ", she:"しぇ", sho:"しょ",
+    sya:"しゃ", syu:"しゅ", syo:"しょ",
+    ja:"じゃ", ji:"じ", ju:"じゅ", je:"じぇ", jo:"じょ",
+    jya:"じゃ", jyu:"じゅ", jyo:"じょ",
+    zya:"じゃ", zyu:"じゅ", zyo:"じょ",
+    cha:"ちゃ", chi:"ち", chu:"ちゅ", che:"ちぇ", cho:"ちょ",
+    tya:"ちゃ", tyu:"ちゅ", tyo:"ちょ",
+    tsu:"つ",
+    nya:"にゃ", nyu:"にゅ", nyo:"にょ",
+    hya:"ひゃ", hyu:"ひゅ", hyo:"ひょ",
+    bya:"びゃ", byu:"びゅ", byo:"びょ",
+    pya:"ぴゃ", pyu:"ぴゅ", pyo:"ぴょ",
+    mya:"みゃ", myu:"みゅ", myo:"みょ",
+    rya:"りゃ", ryu:"りゅ", ryo:"りょ",
+    la:"ぁ", li:"ぃ", lu:"ぅ", le:"ぇ", lo:"ぉ",
+    xa:"ぁ", xi:"ぃ", xu:"ぅ", xe:"ぇ", xo:"ぉ",
+    lya:"ゃ", lyu:"ゅ", lyo:"ょ", xya:"ゃ", xyu:"ゅ", xyo:"ょ",
+    ltu:"っ", xtu:"っ", ltsu:"っ",
+    lwa:"ゎ", xwa:"ゎ",
+  };
+  const ROMAJI_KEYS = Object.keys(ROMAJI);
+  const VOWELS = "aiueo";
+
+  /* pend（未確定ローマ字）を先頭からかなに変換できるだけ変換する */
+  function convert(pend){
+    let out = "";
+    outer: while (pend) {
+      // 「ん」の判定
+      if (pend[0] === "n") {
+        if (pend.length < 2) break;                     // n 単独 → 続きを待つ（翻訳時は「ん」に確定）
+        if (pend[1] === "n" || pend[1] === "'") {       // nn / n' → 即「ん」（一般的なIMEと同じ）
+          out += "ん"; pend = pend.slice(2); continue;  // ※「おんな」は onnna か on'na で入力
+        }
+        if (!(VOWELS + "y").includes(pend[1])) { out += "ん"; pend = pend.slice(1); continue; }
+      }
+      // 促音「っ」（子音の連続。tch も っ+ch 扱い）
+      if (pend.length >= 2 && !(VOWELS + "n").includes(pend[0]) &&
+          (pend[0] === pend[1] || (pend[0] === "t" && pend[1] === "c"))) {
+        out += "っ"; pend = pend.slice(1); continue;
+      }
+      // 変換表の最長一致（4〜1文字）
+      for (let L = Math.min(4, pend.length); L >= 1; L--) {
+        const k = pend.slice(0, L);
+        if (ROMAJI[k]) { out += ROMAJI[k]; pend = pend.slice(L); continue outer; }
+      }
+      // まだ何かの途中なら待つ（例: "ky" "ts" "sh"）
+      if (ROMAJI_KEYS.some(k => k.startsWith(pend))) break;
+      // どの語にも繋がらない → 先頭1文字を捨てる
+      pend = pend.slice(1);
+    }
+    return [out, pend];
+  }
+
+  let kana = "", pend = "";
+  function renderField(){ trInput.value = kana + pend; }
+  function finalizePend(){
+    if (pend === "n") kana += "ん";   // 末尾の n は「ん」に確定
+    pend = "";
+  }
+  /* 翻訳実行前に未確定分を確定させる（translate() 冒頭から呼ばれる） */
+  kbdFinalize = () => { finalizePend(); renderField(); };
+
+  /* 物理キーボードで直接編集された場合は、その内容を確定済みとして同期 */
+  trInput.addEventListener("input", () => { kana = trInput.value; pend = ""; });
+
+  /* ---- キーの生成 ---- */
+  const num = $("kbd-num");
+  for (const ch of "1234567890") {
+    const b = document.createElement("button");
+    b.className = "kbd-key"; b.textContent = ch; b.dataset.digit = ch;
+    num.appendChild(b);
+  }
+  document.querySelectorAll("#kbd .kbd-row[data-keys]").forEach(row => {
+    for (const ch of row.dataset.keys) {
+      const b = document.createElement("button");
+      b.className = "kbd-key"; b.textContent = ch; b.dataset.letter = ch;
+      row.appendChild(b);
+    }
+    if (row.dataset.extra === "bs") {
+      const b = document.createElement("button");
+      b.className = "kbd-key bs"; b.textContent = "⌫"; b.id = "kbd-bs";
+      b.title = "1文字削除";
+      row.appendChild(b);
+    }
+  });
+
+  /* ---- 入力処理 ---- */
+  $("kbd").addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    if (b.dataset.letter) {
+      pend += b.dataset.letter;
+      const [out, rest] = convert(pend);
+      kana += out; pend = rest;
+    } else if (b.dataset.digit) {
+      finalizePend();
+      kana += b.dataset.digit;
+    } else if (b.dataset.ch) {              // 「ー」
+      finalizePend();
+      kana += b.dataset.ch;
+    } else if (b.id === "kbd-bs") {
+      if (pend) pend = pend.slice(0, -1);
+      else kana = kana.slice(0, -1);
+    } else if (b.id === "kbd-clear") {
+      kana = ""; pend = "";
+    } else if (b.id === "kbd-go") {
+      translate();                          // translate() 側で kbdFinalize が走る
+      return;
+    }
+    renderField();
+  });
+})();
+
+/* ================================================================
    時計（赤文字・通常書体のデジタル時計）
    ※数字は一般的な書体（カクカクの7セグではない）を赤で表示
    ※「0」だけは丸＋斜線（🚫型）で描く——STEP裏の仕掛け
@@ -866,15 +1066,23 @@ const SHOW_START = { h: 19, m: 30 };           // 作中公演の開始前時刻
 const CLOCK_DATE_TEXT = "08.30 SUN";           // 日付は 8/30 固定（曜日表記は自由に変更可）
 
 let clockMode = "manual";     // "real" | "manual"
+let clockStarted = false;     // 最初にホーム画面が開いた瞬間から進み始める
 let manualBase  = Date.now();
 let manualStart = (SHOW_START.h * 3600 + SHOW_START.m * 60) * 1000;
+
+/* 初回のみ：時計の進行を開始（起動モーション完了＝ホーム表示時に呼ばれる） */
+function startShowClock(){
+  if (clockStarted) return;
+  clockStarted = true;
+  manualBase = Date.now();
+}
 
 function currentTime(){
   if (clockMode === "real") {
     const d = new Date();
     return { h: d.getHours(), m: d.getMinutes(), s: d.getSeconds() };
   }
-  const elapsed = Date.now() - manualBase;
+  const elapsed = clockStarted ? (Date.now() - manualBase) : 0;   // 開始前は19:30で静止
   const total = (manualStart + elapsed) % 86400000;
   const h = Math.floor(total / 3600000);
   const m = Math.floor((total % 3600000) / 60000);
@@ -908,6 +1116,7 @@ renderClock();
 /* Ctrl + Shift → 作中時刻 19:30 にリセット */
 function resetShowTime(){
   clockMode   = "manual";
+  clockStarted = true;   // リセット＝その瞬間から19:30で再スタート
   manualStart = (SHOW_START.h * 3600 + SHOW_START.m * 60) * 1000;
   manualBase  = Date.now();
   const radio = document.querySelector('input[name="clock-mode"][value="manual"]');
@@ -1024,6 +1233,7 @@ $("staff-apply").addEventListener("click", () => {
     manualStart = (h * 3600 + m * 60) * 1000;
     manualBase  = Date.now();
     clockMode = "manual";
+    clockStarted = true;
   } else {
     clockMode = "real";
   }
