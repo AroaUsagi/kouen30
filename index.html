@@ -33,7 +33,7 @@
     font-size:16px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;}
+  html,body{height:100%; overscroll-behavior:none;}   /* 端からの引っ張り操作を抑止 */
   body{
     margin:0;
     background:var(--void);
@@ -41,6 +41,7 @@
     font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;
     user-select:none;
     overflow:hidden;
+    touch-action:manipulation;   /* ダブルタップ拡大等のジェスチャーを無効化 */
   }
 
   /* ---------- 端末筐体 ---------- */
@@ -81,13 +82,7 @@
   #logo{color:var(--ice); font-weight:700; cursor:pointer;}
   #logo em{font-style:normal; color:var(--pulse); text-shadow:0 0 12px var(--pulse-soft);}
   #statusbar .right{display:flex; align-items:center; gap:18px;}
-  #fs-btn{
-    font-family:var(--mono); letter-spacing:.1em;
-    background:transparent; border:1px solid var(--line); color:var(--sub);
-    border-radius:8px; padding:3px 10px; font-size:.72rem; cursor:pointer;
-    transition:border-color .2s, color .2s;
-  }
-  #fs-btn:hover{border-color:var(--pulse); color:var(--ice);}
+  #sb-status{font-size:.7rem; color:rgba(143,160,196,.55);}
 
   /* ---------- 画面共通 ---------- */
   #screens{position:relative; z-index:2; flex:1 1 auto; min-height:0;}
@@ -501,7 +496,7 @@
   <div id="statusbar">
     <span id="logo" title="ホームに戻る">PARADOX<em>-OS</em></span>
     <span class="right">
-      <button id="fs-btn" title="全画面表示">⛶ FULL</button>
+      <span id="sb-status">SYSTEM OK</span>
     </span>
   </div>
 
@@ -563,7 +558,7 @@
       <div id="tr-form">
         <span id="tr-label">ローマ字で入力 — ROMAJI INPUT</span>
         <div id="tr-row">
-          <input id="tr-input" type="text" inputmode="none" autocomplete="off" placeholder="例：tokei → とけい">
+          <input id="tr-input" type="text" inputmode="none" autocomplete="off" placeholder="例：ringo → りんご">
           <button id="tr-go">翻訳</button>
         </div>
       </div>
@@ -631,15 +626,13 @@
   <div class="card">
     <h3>STAFF PANEL</h3>
     <label>
-      <input type="radio" name="clock-mode" value="real">
-      実時刻を表示
-    </label>
-    <label>
-      <input type="radio" name="clock-mode" value="manual" checked>
       指定時刻から進行：
       <input type="time" id="staff-time" value="19:30" step="60">
     </label>
-    <span class="note">初期状態では作中時刻 <b>19:30</b> から進行します（作中公演は 19:30〜20:00）。<b>Ctrl + Shift</b> を同時押しすると、いつでも 19:30 にリセットできます。任意の時刻に合わせたい場合はここで指定して「設定」を押してください。</span>
+    <label>
+      <button id="staff-fs-btn" type="button">全画面を解除する</button>
+    </label>
+    <span class="note">初期状態では作中時刻 <b>19:30</b> から進行します（作中公演は 19:30〜20:00）。<b>Ctrl + Shift</b> を同時押しすると、いつでも 19:30 にリセットできます。全画面表示の解除・再開は上のボタンで即座に切り替わります（解除中はタッチしても全画面に戻りません）。</span>
     <div class="row">
       <button id="staff-close">閉じる</button>
       <button id="staff-apply" class="primary">設定</button>
@@ -739,7 +732,8 @@ function playBoot(){
 function finishBoot(){
   clearTimeout(bootTimer);
   bootEl.classList.add("hidden");
-  bootEl.classList.remove("playing");
+  // ※.playing はここでは外さない。フェードアウト中に外すと
+  //   待機状態（電源ボタン）が一瞬見えてしまうため、完全に消えてから戻す
   bootPlaying = false;
   startShowClock();   // 初回のホーム表示で作中時刻 19:30 が進み始める（2回目以降は無効）
   // どの画面にいてもホームに戻す
@@ -747,7 +741,12 @@ function finishBoot(){
   const home = $("home");
   home.classList.add("active", "entering");
   setTimeout(() => home.classList.remove("entering"), 1200);
-  setTimeout(() => { if (bootEl.classList.contains("hidden")) bootEl.style.display = "none"; }, 560);
+  setTimeout(() => {
+    if (bootEl.classList.contains("hidden")) {
+      bootEl.style.display = "none";
+      bootEl.classList.remove("playing");   // 完全に消えた後に待機状態へ戻す
+    }
+  }, 560);
 }
 
 bootEl.addEventListener("click", () => {
@@ -809,11 +808,35 @@ document.querySelectorAll("[data-open]").forEach(btn => {
   });
 });
 
-/* 全画面ボタン */
-$("fs-btn").addEventListener("click", () => {
-  if (document.fullscreenElement) document.exitFullscreen();
-  else document.documentElement.requestFullscreen().catch(()=>{});
-});
+/* ================================================================
+   全画面表示の維持
+   起動モーション開始（＝最初のタップ）で全画面に入り、
+   Esc等で解除されても次のタッチで即座に全画面へ復帰する。
+   ※プレイヤーは実質解除できない。運営は運営用パネルから解除可能。
+   （ブラウザ仕様上、タップ等のユーザー操作の瞬間にしか全画面化
+     できないため「解除された瞬間に戻す」のではなく「次のタッチで戻す」）
+   ================================================================ */
+let keepFullscreen = true;
+function enterFS(){
+  if (keepFullscreen && !document.fullscreenElement) {
+    document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(()=>{});
+  }
+}
+document.addEventListener("pointerdown", enterFS, true);   // どこをタッチしても復帰
+
+/* 画面端からのスワイプ（ブラウザのツールバー表示等）とピンチ操作を抑止
+   ※ボタン/入力欄への通常タップは妨げない */
+const EDGE = 28;   // 端とみなす幅(px)
+document.addEventListener("touchstart", e => {
+  const t = e.touches[0];
+  const nearEdge = t.clientY > innerHeight - EDGE || t.clientY < EDGE ||
+                   t.clientX < EDGE || t.clientX > innerWidth - EDGE;
+  // ロゴは画面左上の端にあるため、ステータスバー内は抑止の対象外にする
+  if (nearEdge && !e.target.closest("button, input, label, #statusbar")) e.preventDefault();
+}, { passive:false });
+document.addEventListener("touchmove", e => {
+  if (e.touches.length > 1) e.preventDefault();   // ピンチ抑止
+}, { passive:false });
 
 /* ホームのティッカー */
 (function ticker(){
@@ -1061,7 +1084,7 @@ function colonSVG(cx, visible){
 /* 時刻の供給
    初期状態：作中時刻 19:30 から進行（作中公演は 19:30〜20:00）
    Ctrl + Shift 同時押しでいつでも 19:30 にリセット
-   運営用パネル（ロゴ長押し）で実時刻／任意時刻にも切替可能 */
+   運営用パネル（ロゴ長押し）で任意時刻にも変更可能 */
 const SHOW_START = { h: 19, m: 30 };           // 作中公演の開始前時刻
 const CLOCK_DATE_TEXT = "08.30 SUN";           // 日付は 8/30 固定（曜日表記は自由に変更可）
 
@@ -1119,8 +1142,6 @@ function resetShowTime(){
   clockStarted = true;   // リセット＝その瞬間から19:30で再スタート
   manualStart = (SHOW_START.h * 3600 + SHOW_START.m * 60) * 1000;
   manualBase  = Date.now();
-  const radio = document.querySelector('input[name="clock-mode"][value="manual"]');
-  if (radio) radio.checked = true;
   renderClock();
   showToast("TIME RESET → 19:30");
 }
@@ -1226,17 +1247,25 @@ $("logo").addEventListener("click", () => {
 });
 
 $("staff-close").addEventListener("click", () => staff.classList.remove("open"));
-$("staff-apply").addEventListener("click", () => {
-  const mode = document.querySelector('input[name="clock-mode"]:checked').value;
-  if (mode === "manual") {
-    const [h, m] = $("staff-time").value.split(":").map(Number);
-    manualStart = (h * 3600 + m * 60) * 1000;
-    manualBase  = Date.now();
-    clockMode = "manual";
-    clockStarted = true;
+
+/* 全画面の解除／再開（押した瞬間に切り替わる） */
+$("staff-fs-btn").addEventListener("click", () => {
+  if (keepFullscreen) {
+    keepFullscreen = false;                     // タッチによる自動復帰も停止
+    if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+    $("staff-fs-btn").textContent = "全画面にする";
   } else {
-    clockMode = "real";
+    keepFullscreen = true;
+    enterFS();                                  // クリック＝ユーザー操作なのでここで全画面化できる
+    $("staff-fs-btn").textContent = "全画面を解除する";
   }
+});
+$("staff-apply").addEventListener("click", () => {
+  const [h, m] = $("staff-time").value.split(":").map(Number);
+  manualStart = (h * 3600 + m * 60) * 1000;
+  manualBase  = Date.now();
+  clockMode = "manual";
+  clockStarted = true;
   staff.classList.remove("open");
   renderClock();
 });
