@@ -818,9 +818,12 @@ document.querySelectorAll("[data-open]").forEach(btn => {
    ================================================================ */
 let keepFullscreen = true;
 function enterFS(){
-  if (keepFullscreen && !document.fullscreenElement) {
-    document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(()=>{});
-  }
+  if (!keepFullscreen || document.fullscreenElement) return;
+  // すでに画面全体を占めている（キオスクモード / F11）ならJSの全画面化はしない。
+  // JSの全画面はブラウザ仕様で「長押し→×で終了」のUIが出てしまうが、
+  // キオスクモードならその×自体が存在しないため、上書きしないことが重要。
+  if (Math.abs(screen.height - innerHeight) < 2 && Math.abs(screen.width - innerWidth) < 2) return;
+  document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(()=>{});
 }
 document.addEventListener("pointerdown", enterFS, true);   // どこをタッチしても復帰
 
