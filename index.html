@@ -5,11 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>端末</title>
 <style>
+  /* 時計用フォント：にゃしぃフォント改二
+     フォントファイルを「nyashi-kai2.ttf」という名前にして、この
+     HTMLと同じフォルダに置くと適用されます（GitHub Pagesなら同じ
+     リポジトリに一緒にアップロード）。未配置でも Segoe UI で動きます */
+  @font-face{
+    font-family:"NyashiKai2";
+    src:url("nyashi-kai2.ttf") format("truetype");
+    font-display:swap;
+  }
   /* ============================================================
      「公演開始まであと30分」用 端末ソフト  ―  PARADOX-OS
      - 待機画面（電源ボタン）→ クリックで起動モーション → ホーム
-     - 左上の「PARADOX-OS」ロゴ：クリックで起動モーションを再生してホームへ
-                                約2秒 長押しで運営用パネル
+     - 左上の「⟳ RESTART」ボタン：クリックで起動モーションを再生してホームへ
+                                  約2秒 長押しで運営用パネル
      - 時計は作中時刻 19:30 スタート（作中公演は 19:30〜20:00）
        Ctrl + Shift 同時押しでいつでも 19:30 にリセット
      - 日付は 8/30 固定（JSの CLOCK_DATE_TEXT で変更可）
@@ -79,8 +88,19 @@
     background:linear-gradient(180deg, rgba(11,17,32,.9), rgba(11,17,32,.35));
     backdrop-filter:blur(6px);
   }
-  #logo{color:var(--ice); font-weight:700; cursor:pointer;}
-  #logo em{font-style:normal; color:var(--pulse); text-shadow:0 0 12px var(--pulse-soft);}
+  #logo{
+    font-family:var(--mono); font-size:.72rem; font-weight:700;
+    letter-spacing:.24em; text-indent:.06em;
+    color:var(--sub); background:transparent;
+    border:1px solid var(--line); border-radius:9px;
+    padding:5px 14px; cursor:pointer;
+    transition:border-color .2s, color .2s, box-shadow .2s, transform .08s;
+  }
+  #logo:hover{
+    border-color:rgba(111,141,255,.55); color:var(--ice);
+    box-shadow:0 0 14px rgba(111,141,255,.18);
+  }
+  #logo:active{transform:scale(.95);}
   #statusbar .right{display:flex; align-items:center; gap:18px;}
   #sb-status{font-size:.7rem; color:rgba(143,160,196,.55);}
 
@@ -103,51 +123,89 @@
   .screen.entering .stagger > *:nth-child(2){animation-delay:.20s;}
   .screen.entering .stagger > *:nth-child(3){animation-delay:.30s;}
   .screen.entering .stagger > *:nth-child(4){animation-delay:.40s;}
+  .screen.entering .stagger > *:nth-child(5){animation-delay:.50s;}
   .screen.leaving{transition:opacity .16s ease, transform .16s ease; opacity:0; transform:scale(.985);}
 
-  /* ---------- ホーム ---------- */
+  /* ---------- ホーム ----------
+     大きなロゴ（PARADOX-OS）を主役に据え、その下に
+     「時計・翻訳・マップ」の3枚を同一フォーマットの機能カードとして横並びに。
+     各カード＝ [番号+英名] / [インセットのスクリーン枠] / [和名+›]  */
   #home{align-items:center; justify-content:center;}
   #home .stagger{display:flex; flex-direction:column; align-items:center; gap:0;}
-  #home-title{
-    margin:0 0 6px; font-size:1.05rem; font-weight:600;
-    letter-spacing:.6em; text-indent:.6em; color:var(--sub);
+  #home-logo{
+    font-family:var(--mono); font-weight:700;
+    font-size:clamp(2.3rem, 5.6vw, 3.7rem);
+    letter-spacing:.38em; text-indent:.38em;
+    color:var(--ice); white-space:nowrap;
   }
+  #home-logo em{font-style:normal; color:var(--pulse); text-shadow:0 0 28px var(--pulse-soft);}
   #home-sub{
-    font-family:var(--mono); font-size:.68rem; letter-spacing:.34em;
-    color:rgba(143,160,196,.55); margin-bottom:44px;
+    display:flex; align-items:center; gap:16px;
+    font-family:var(--mono); font-size:.68rem; letter-spacing:.5em; text-indent:.5em;
+    color:rgba(143,160,196,.6);
+    margin:16px 0 54px;
   }
-  #home .apps{display:flex; gap:52px; flex-wrap:wrap; justify-content:center;}
-  .app-icon{
-    display:flex; flex-direction:column; align-items:center; gap:16px;
-    background:none; border:none; cursor:pointer; padding:8px; color:var(--ice);
+  #home-sub::before, #home-sub::after{
+    content:""; width:64px; height:1px;
+    background:linear-gradient(90deg, transparent, rgba(150,178,255,.35));
   }
-  .app-icon .tile{
-    position:relative;
-    width:128px; height:128px; border-radius:30px;
+  #home-sub::after{transform:scaleX(-1);}
+
+  #home .apps{display:flex; gap:28px; flex-wrap:wrap; justify-content:center;}
+  .fn-card{
+    position:relative; width:252px;
+    display:flex; flex-direction:column; gap:12px;
+    padding:16px 18px 14px;
     background:linear-gradient(160deg, rgba(30,41,66,.85), rgba(13,19,35,.9));
-    border:1px solid var(--line);
+    border:1px solid var(--line); border-radius:24px;
     box-shadow:0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
-    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--ice);
     transition:transform .22s cubic-bezier(.2,.8,.25,1), box-shadow .22s, border-color .22s;
   }
-  .app-icon .tile::after{           /* 上面のガラス反射 */
+  .fn-card::after{
     content:""; position:absolute; inset:0; border-radius:inherit;
-    background:linear-gradient(165deg, rgba(255,255,255,.09) 0%, transparent 38%);
+    background:linear-gradient(165deg, rgba(255,255,255,.07) 0%, transparent 40%);
     pointer-events:none;
   }
-  .app-icon:hover .tile, .app-icon:focus-visible .tile{
+  .fn-card:hover, .fn-card:focus-visible{
     transform:translateY(-6px);
     border-color:rgba(111,141,255,.55);
     box-shadow:0 26px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(111,141,255,.25), 0 0 34px rgba(111,141,255,.18);
   }
-  .app-icon:active .tile{transform:translateY(-2px) scale(.96);}
-  .app-icon .tile svg{width:58px; height:58px; filter:drop-shadow(0 0 10px rgba(111,141,255,.45));}
-  .app-icon .name{font-size:1rem; font-weight:600; letter-spacing:.32em; text-indent:.32em;}
-  .app-icon .en{
-    font-family:var(--mono); font-size:.62rem; letter-spacing:.3em;
-    color:var(--sub); margin-top:-8px;
+  .fn-card:active{transform:translateY(-2px) scale(.97);}
+  /* 時計カードのみ、時計の赤で反応させて個性を出す */
+  #home-clock:hover, #home-clock:focus-visible{
+    border-color:rgba(255,110,100,.4);
+    box-shadow:0 26px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(255,110,100,.18), 0 0 34px rgba(255,82,82,.16);
   }
-  .app-icon:focus-visible{outline:none;}
+  .fc-top{display:flex; align-items:baseline; justify-content:space-between; font-family:var(--mono);}
+  .fc-idx{font-size:.82rem; letter-spacing:.18em; color:var(--pulse);}
+  .fc-en{font-size:.6rem; letter-spacing:.34em; color:rgba(143,160,196,.6);}
+  .fc-screen{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px;
+    height:132px;
+    background:linear-gradient(180deg, #0a101f, #060a14);
+    border:1px solid var(--line); border-radius:14px;
+    box-shadow:inset 0 0 26px rgba(0,0,0,.65);
+  }
+  .fc-screen .fc-icon{width:62px; height:62px; filter:drop-shadow(0 0 12px rgba(111,141,255,.45));}
+  #home-clock-svg{
+    display:block; width:186px; height:auto;
+    filter:drop-shadow(0 0 8px rgba(255,82,82,.32));
+  }
+  #home-clock-date{
+    font-family:var(--mono); font-size:.6rem; letter-spacing:.32em; text-indent:.32em;
+    color:var(--sub);
+  }
+  .fc-bottom{display:flex; align-items:center; justify-content:space-between;}
+  .fc-name{font-size:1.05rem; font-weight:600; letter-spacing:.3em; text-indent:.3em;}
+  .fc-go{
+    font-family:var(--mono); font-size:1.05rem; color:var(--sub);
+    animation:hcpulse 2.6s ease-in-out infinite;
+  }
+  @keyframes hcpulse{0%,100%{opacity:.35;} 50%{opacity:1;}}
+  .fn-card:focus-visible{outline:none;}
+
   #ticker{
     margin-top:56px; font-family:var(--mono); font-size:.68rem;
     letter-spacing:.3em; color:rgba(143,160,196,.6); height:1em;
@@ -180,17 +238,17 @@
   }
   .app-body{
     flex:1 1 auto; display:flex; flex-direction:column;
-    align-items:center; padding:34px 22px; gap:26px;
+    align-items:center; padding:40px 24px; gap:30px;
   }
 
   /* ---------- 翻訳 ---------- */
-  #tr-form{width:min(700px,100%); display:flex; flex-direction:column; gap:14px;}
+  #tr-form{width:min(780px,100%); display:flex; flex-direction:column; gap:14px;}
   #tr-label{
     font-family:var(--mono); font-size:.72rem; letter-spacing:.28em; color:var(--sub);
   }
   #tr-row{display:flex; gap:12px;}
   #tr-input{
-    flex:1; font-size:1.5rem; padding:15px 20px;
+    flex:1; font-size:1.65rem; padding:16px 22px;
     border:1px solid var(--line); border-radius:var(--radius);
     background:rgba(10,15,28,.8); color:var(--ice);
     user-select:text; font-family:inherit;
@@ -210,7 +268,7 @@
   #tr-go:active{transform:scale(.97);}
   #tr-go:disabled{opacity:.5; cursor:default;}
   #tr-result{
-    position:relative; width:min(700px,100%); min-height:150px;
+    position:relative; width:min(780px,100%); min-height:160px;
     background:linear-gradient(180deg, #0a101f, #070b16);
     border:1px solid var(--line); border-radius:var(--radius);
     box-shadow:inset 0 0 46px rgba(0,0,0,.6);
@@ -232,12 +290,12 @@
   @keyframes scan{from{transform:translateX(-100%)} to{transform:translateX(320%)}}
   #tr-tiles{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
   .tr-tile{
-    width:58px; height:74px; border-radius:12px;
+    width:64px; height:82px; border-radius:12px;
     background:rgba(126,150,205,.08);
     border:1px solid rgba(126,150,205,.22);
     color:var(--lcd-lit);
     display:flex; align-items:center; justify-content:center;
-    font-size:2.3rem; font-weight:700; font-family:var(--mono);
+    font-size:2.5rem; font-weight:700; font-family:var(--mono);
     text-transform:lowercase;
     text-shadow:0 0 14px rgba(159,183,255,.7);
     opacity:0; transform:translateY(10px) scale(.9);
@@ -263,13 +321,13 @@
 
   /* ---------- タッチキーボード（翻訳用・ローマ字入力） ----------
      QWERTY 3段＋数字段＋機能段。キーは押し込み式の立体キーキャップ */
-  #kbd{width:min(620px,100%); display:flex; flex-direction:column; gap:7px;}
+  #kbd{width:min(720px,100%); display:flex; flex-direction:column; gap:7px;}
   .kbd-row{display:flex; gap:6px; justify-content:center;}
   .kbd-row.indent1{padding:0 4.5%;}
   .kbd-row.indent2{padding:0 2%;}
   .kbd-key{
-    flex:1; min-width:0; height:46px;
-    font-family:var(--mono); font-size:1.02rem; text-transform:uppercase;
+    flex:1; min-width:0; height:53px;
+    font-family:var(--mono); font-size:1.12rem; text-transform:uppercase;
     color:var(--ice); text-shadow:0 0 10px rgba(159,183,255,.25);
     background:linear-gradient(180deg, #202b48, #141c33);
     border:1px solid rgba(150,178,255,.20); border-bottom-color:rgba(150,178,255,.08);
@@ -287,7 +345,7 @@
                inset 0 1px 0 rgba(255,255,255,.06), 0 0 18px rgba(111,141,255,.4);
   }
   #kbd-num .kbd-key{
-    height:33px; font-size:.82rem; color:var(--sub); border-radius:8px;
+    height:38px; font-size:.9rem; color:var(--sub); border-radius:8px;
     box-shadow:0 2px 0 #070b16, 0 3px 8px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.06);
   }
   #kbd-num .kbd-key:active{transform:translateY(2px); box-shadow:0 0 0 #070b16, 0 0 14px rgba(111,141,255,.35);}
@@ -318,18 +376,18 @@
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     background:radial-gradient(60% 90% at 50% 30%, rgba(255,82,82,.08), transparent 70%);
   }
-  #clock-svg{display:block; filter:drop-shadow(0 0 16px rgba(255,82,82,.35));}
+  #clock-svg{display:block; width:min(680px,84vw); height:auto; filter:drop-shadow(0 0 16px rgba(255,82,82,.35));}
   #clock-face.warm #clock-svg{animation:warmflicker .45s steps(3) 1;}
   @keyframes warmflicker{
     0%{opacity:.2} 40%{opacity:.9} 60%{opacity:.4} 100%{opacity:1}
   }
   #clock-date{
     font-family:var(--mono); color:var(--sub);
-    letter-spacing:.3em; font-size:.9rem;
+    letter-spacing:.3em; font-size:1.05rem;
   }
 
   /* ---------- マップ ---------- */
-  #map-wrap{width:min(880px,100%);}
+  #map-wrap{width:min(1000px,100%);}
   #map-svg{
     width:100%; height:auto; display:block;
     background:
@@ -369,7 +427,7 @@
   #boot-standby{display:flex; flex-direction:column; align-items:center; gap:34px;}
   #boot.playing #boot-standby{display:none;}
   #boot-power{
-    width:104px; height:104px;
+    width:118px; height:118px;
     filter:drop-shadow(0 0 22px rgba(111,141,255,.55));
     animation:breathe 2.6s ease-in-out infinite;
   }
@@ -387,7 +445,7 @@
   #boot-play{display:none; flex-direction:column; align-items:center; gap:26px;}
   #boot.playing #boot-play{display:flex;}
   #boot-logo{
-    font-family:var(--mono); font-size:clamp(1.6rem,4vw,2.6rem);
+    font-family:var(--mono); font-size:clamp(1.8rem,4.5vw,3rem);
     font-weight:700; letter-spacing:.5em; text-indent:.5em; color:var(--ice);
     display:flex;
   }
@@ -492,9 +550,9 @@
 
 <div id="device">
 
-  <!-- ステータスバー（ロゴ：クリック=起動モーション再生してホームへ / 長押し2秒=運営用パネル） -->
+  <!-- ステータスバー（RESTART：クリック=起動モーション再生してホームへ / 長押し2秒=運営用パネル） -->
   <div id="statusbar">
-    <span id="logo" title="ホームに戻る">PARADOX<em>-OS</em></span>
+    <button id="logo" title="再起動（ホームに戻る）">⟳ RESTART</button>
     <span class="right">
       <span id="sb-status">SYSTEM OK</span>
     </span>
@@ -505,43 +563,43 @@
   <!-- ============ ホーム ============ -->
   <section class="screen active" id="home">
     <div class="stagger">
-      <h1 id="home-title">端末</h1>
-      <div id="home-sub">PARADOX-OS ver 0.9.2</div>
+      <div id="home-logo">PARADOX<em>-OS</em></div>
+      <div id="home-sub">端末 ver 0.9.2</div>
       <div class="apps">
-        <button class="app-icon" data-open="app-translate">
-          <span class="tile">
-            <svg viewBox="0 0 64 64" fill="none" stroke="#9db7ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+
+        <button class="fn-card" id="home-clock" data-open="app-clock" title="時計を開く">
+          <span class="fc-top"><span class="fc-idx">01</span><span class="fc-en">CLOCK</span></span>
+          <span class="fc-screen">
+            <svg id="home-clock-svg" viewBox="0 0 520 160" aria-hidden="true"></svg>
+            <span id="home-clock-date"></span>
+          </span>
+          <span class="fc-bottom"><span class="fc-name">時計</span><span class="fc-go">›</span></span>
+        </button>
+
+        <button class="fn-card" data-open="app-translate" title="翻訳を開く">
+          <span class="fc-top"><span class="fc-idx">02</span><span class="fc-en">TRANSLATE</span></span>
+          <span class="fc-screen">
+            <svg class="fc-icon" viewBox="0 0 64 64" fill="none" stroke="#9db7ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="6" y="10" width="30" height="30" rx="7"/>
               <text x="21" y="32" text-anchor="middle" font-size="17" fill="#9db7ff" stroke="none" font-family="sans-serif" font-weight="bold">あ</text>
               <rect x="28" y="26" width="30" height="30" rx="7" fill="#0d1424"/>
               <text x="43" y="48" text-anchor="middle" font-size="17" fill="#9db7ff" stroke="none" font-family="sans-serif" font-weight="bold">A</text>
             </svg>
           </span>
-          <span class="name">翻訳</span>
-          <span class="en">TRANSLATE</span>
+          <span class="fc-bottom"><span class="fc-name">翻訳</span><span class="fc-go">›</span></span>
         </button>
 
-        <button class="app-icon" data-open="app-clock">
-          <span class="tile">
-            <svg viewBox="0 0 64 64" fill="none" stroke="#9db7ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="32" cy="32" r="23"/>
-              <path d="M32 19 v13 l9 6"/>
-            </svg>
-          </span>
-          <span class="name">時計</span>
-          <span class="en">CLOCK</span>
-        </button>
-
-        <button class="app-icon" data-open="app-map">
-          <span class="tile">
-            <svg viewBox="0 0 64 64" fill="none" stroke="#9db7ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+        <button class="fn-card" data-open="app-map" title="マップを開く">
+          <span class="fc-top"><span class="fc-idx">03</span><span class="fc-en">MAP</span></span>
+          <span class="fc-screen">
+            <svg class="fc-icon" viewBox="0 0 64 64" fill="none" stroke="#9db7ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M10 16 L26 10 L38 16 L54 10 V48 L38 54 L26 48 L10 54 Z"/>
               <path d="M26 10 V48 M38 16 V54"/>
             </svg>
           </span>
-          <span class="name">マップ</span>
-          <span class="en">MAP</span>
+          <span class="fc-bottom"><span class="fc-name">マップ</span><span class="fc-go">›</span></span>
         </button>
+
       </div>
       <div id="ticker"><span id="ticker-text">SYSTEM READY</span></div>
     </div>
@@ -802,7 +860,8 @@ document.querySelectorAll("[data-open]").forEach(btn => {
     if (target === "home") {
       goHome(btn.closest(".screen"));
     } else {
-      const r = btn.querySelector(".tile").getBoundingClientRect();
+      const origin = btn.querySelector(".tile") || btn;   // ホームの時計ウィジェットはタイルを持たない
+      const r = origin.getBoundingClientRect();
       openApp(target, r.left + r.width / 2, r.top + r.height / 2);
     }
   });
@@ -1064,7 +1123,7 @@ trInput.addEventListener("keydown", e => { if (e.key === "Enter") translate(); }
    ================================================================ */
 const CLOCK_RED     = "#ff5252";                 // 数字の色（自由に変更可）
 const CLOCK_RED_DIM = "rgba(255,82,82,.16)";     // コロン消灯時の色
-const CLOCK_FONT    = "'Segoe UI','Yu Gothic UI','Meiryo',sans-serif";
+const CLOCK_FONT    = "'NyashiKai2','Segoe UI','Yu Gothic UI','Meiryo',sans-serif";   // にゃしぃフォント改二（nyashi-kai2.ttf を同梱）
 
 function digitSVG(ch, cx){
   if (ch === "0") {
@@ -1118,7 +1177,10 @@ function currentTime(){
 
 const clockSVG  = $("clock-svg");
 const clockDate = $("clock-date");
+const homeClockSVG  = $("home-clock-svg");
+const homeClockDate = $("home-clock-date");
 clockDate.textContent = CLOCK_DATE_TEXT;
+homeClockDate.textContent = CLOCK_DATE_TEXT;
 
 // 桁の中心X座標: H H : M M（viewBox 520 × 160）
 const CLOCK_SLOTS = [70, 175, 260, 345, 450];
@@ -1135,6 +1197,7 @@ function renderClock(){
     svg += (ch === ":") ? colonSVG(CLOCK_SLOTS[i], blink) : digitSVG(ch, CLOCK_SLOTS[i]);
   });
   clockSVG.innerHTML = svg;
+  homeClockSVG.innerHTML = svg;   // ホームのウィジェットにも同じ表示（0の🚫も同一）
 }
 setInterval(renderClock, 250);
 renderClock();
